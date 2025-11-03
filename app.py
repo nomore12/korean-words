@@ -7,6 +7,7 @@ import os
 from dotenv import load_dotenv
 import httpx
 from httpx import Limits, Timeout
+import json
 
 # 환경변수 로드
 load_dotenv()
@@ -61,14 +62,31 @@ async def generation(request: Request, sentence: str = Form(...)):
 
         # 비동기 OpenAI API 호출
         # 비동기 응답 뒤에 로깅 추가
+        SYSTEM_PROMPT = """
+        당신은 한글 단어 추출기입니다.
+        항상 JSON 형식으로 답변해주세요.
+        json 형식: {
+            "words": [
+                {
+                    "word": "단어",
+                    "meaning": "뜻"
+                }
+            ]
+        }
+        meaning은 20자 이내로 추출해주세요.
+        word는 10자 이내로 추출해주세요.
+        """
         response = await client.responses.create(
             model="gpt-5-mini-2025-08-07",  # ↓ 아래 2번에서 더 경량/신형 모델로 교체 권장
-            input=f"""아래 형식으로만 쓰세요.
-- 한국어 단어 10개, 표 형식(머리글 포함 11행)
-- 각 뜻은 10자 이내, 예문 금지
-- 추가 설명 금지
-
-문장: {sentence}""",
+            input=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": sentence},
+            ],
+            #             input=f"""아래 형식으로만 쓰세요.
+            # - 한국어 단어 10개, 표 형식(머리글 포함 11행)
+            # - 각 뜻은 10자 이내, 예문 금지
+            # - 추가 설명 금지
+            # 문장: {sentence}""",
         )
         usage = getattr(response, "usage", None)
         if usage:
@@ -78,9 +96,23 @@ async def generation(request: Request, sentence: str = Form(...)):
             )
 
         end_time = time.time()
-        result = response.output_text
+
+        # JSON 파싱 시도
+        try:
+            result = json.loads(response.output_text)
+            print(f"[{request_id}] JSON 파싱 성공")
+        except json.JSONDecodeError as json_error:
+            print(f"[{request_id}] JSON 파싱 실패: {json_error}")
+            print(f"[{request_id}] 원본 응답: {response.output_text}")
+            # JSON 파싱 실패 시 기본 구조 생성
+            result = {
+                "words": [
+                    {"word": "파싱오류", "meaning": "JSON 형식이 올바르지 않습니다"}
+                ]
+            }
+
         print(f"[{request_id}] API 호출 완료 - 소요시간: {end_time - start_time:.2f}초")
-        print(f"[{request_id}] 생성된 결과: {result[:100]}...")
+        print(f"[{request_id}] 생성된 결과: {result}")
 
         return templates.TemplateResponse(
             "result.html",
@@ -89,12 +121,21 @@ async def generation(request: Request, sentence: str = Form(...)):
 
     except Exception as e:
         print(f"[{request_id}] OpenAI API 오류: {e}")
+        # 에러 시에도 JSON 구조 유지
+        error_result = {
+            "words": [
+                {
+                    "word": "오류",
+                    "meaning": f"처리 중 오류가 발생했습니다: {str(e)[:50]}...",
+                }
+            ]
+        }
         return templates.TemplateResponse(
             "result.html",
             {
                 "request": request,
                 "original_sentence": sentence,
-                "result": f"죄송합니다. 처리 중 오류가 발생했습니다: {str(e)}",
+                "result": error_result,
             },
         )
 
