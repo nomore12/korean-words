@@ -77,16 +77,11 @@ async def generation(request: Request, sentence: str = Form(...)):
         word는 10자 이내로 추출해주세요.
         """
         response = await client.responses.create(
-            model="gpt-5-mini-2025-08-07",  # ↓ 아래 2번에서 더 경량/신형 모델로 교체 권장
+            model="gpt-5-mini-2025-08-07",
             input=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": sentence},
             ],
-            #             input=f"""아래 형식으로만 쓰세요.
-            # - 한국어 단어 10개, 표 형식(머리글 포함 11행)
-            # - 각 뜻은 10자 이내, 예문 금지
-            # - 추가 설명 금지
-            # 문장: {sentence}""",
         )
         usage = getattr(response, "usage", None)
         if usage:

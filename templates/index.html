@@ -104,17 +104,13 @@
             <form action="/generation" method="POST">
                 <div style="margin-bottom: 15px;">
                     <label for="sentence" style="display: block; margin-bottom: 5px; font-weight: bold;">프롬프트 입력:</label>
-                    <select
+                    <textarea
                         id="sentence"
                         name="sentence"
-                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 1rem;"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 1rem; resize: vertical; min-height: 60px;"
+                        placeholder="예) 최신유행 한국어 10개 생성하기"
                         required
-                    >
-                        <option value="" disabled selected>카테고리를 선택하세요...</option>
-                        <option value="최신유행 한국어 10개 생성하기">최신유행 한국어 10개 생성하기</option>
-                        <option value="조선시대 단어 10개 생성하기">조선시대 단어 10개 생성하기</option>
-                        <option value="싱글벙글 아재워드 10개 생성하기">싱글벙글 아재워드 10개 생성하기</option>
-                    </select>
+                    ></textarea>
                 </div>
                 <button type="submit" class="btn" id="submitBtn">단어 생성하기</button>
             </form>
